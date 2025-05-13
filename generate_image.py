@@ -1,39 +1,34 @@
 import streamlit as st
 from PIL import Image
-import openai
-import base64
 import io
-import os
-from openai import OpenAI
-from dotenv import load_dotenv
+import google.generativeai as genai
+from google.generativeai.types import content_types
 
-load_dotenv()
+# APIキーをsecretsから取得（Streamlit Cloud用）
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
-
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
-
-st.title("印刷方式判定アプリ")
+st.title("印刷方式判定アプリ（Gemini 1.5 Flash版）")
 st.write("画像をアップロードすると、最適な印刷方式（スクリーン印刷 / DTG / DTF）をAIが判定します。")
+
+model = genai.GenerativeModel("gemini-1.5-flash")
 
 uploaded_file = st.file_uploader("画像をアップロードしてください", type=["png", "jpg", "jpeg"])
 
 if uploaded_file:
     image = Image.open(uploaded_file)
-    st.image(image, caption="アップロードされた画像", use_column_width=True)
+    st.image(image, caption="アップロードされた画像", use_container_width=True)
 
     if st.button("印刷方式を判定する"):
-        buffered = io.BytesIO()
-        image.save(buffered, format="PNG")
-        img_b64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        with st.spinner("AIが解析中です..."):
+            # 画像をバイナリ化して Part に変換
+            buffered = io.BytesIO()
+            image.save(buffered, format="PNG")
+            img_bytes = buffered.getvalue()
+            image_part = content_types.Part.from_data(data=img_bytes, mime_type="image/png")
 
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "あなたはTシャツ用デザイン画像に最適な印刷方式を判定する専門家です。"},
-                {"role": "user", "content": [
-                    {"type": "text", "text":
-                        """あなたはTシャツの印刷方式を判別する専門家です。
+            # プロンプト定義
+            prompt = """
+あなたはTシャツの印刷方式を判別する専門家です。
 
 以下の画像は、Tシャツにプリントされる予定のデザイン画像です。この画像に対して、以下の3つの印刷方式の中で最も適したものを1つだけ選んでください。また、その理由を専門的な観点から具体的に説明してください。
 
@@ -61,16 +56,11 @@ if uploaded_file:
 1. 最も適している印刷方式（スクリーン印刷 / DTG / DTF）
 2. 理由（使用されている色数、グラデーションの有無、線の細さなどを評価してください）
 3. 必要があれば、注意点やデザイン修正のアドバイスも記載してください
+"""
 
-【画像は以下に添付されています】
+            # 生成リクエスト送信
+            response = model.generate_content([prompt, image_part])
 
-"""}, 
-                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}}
-                ]}
-            ],
-            max_tokens=500,
-        )
-
-        result = response.choices[0].message.content  # ← これが正しい
-        st.markdown("### 判定結果")
-        st.write(result)
+            # 出力表示
+            st.markdown("### 判定結果")
+            st.write(response.text)
