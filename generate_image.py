@@ -6,10 +6,11 @@ import io
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
+
 load_dotenv()
 
-openai.api_key = os.getenv('OPENAI_API_KEY') 
-client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+openai.api_key = st.secrets["OPENAI_API_KEY"]
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 
 st.title("印刷方式判定アプリ")
