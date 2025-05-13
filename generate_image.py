@@ -2,9 +2,8 @@ import streamlit as st
 from PIL import Image
 import io
 import google.generativeai as genai
-from google.generativeai.types import content_types
 
-# APIキーをsecretsから取得（Streamlit Cloud用）
+# Streamlit Cloud向け：APIキーをsecretsから取得
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
 st.title("印刷方式判定アプリ（Gemini 1.5 Flash版）")
@@ -20,13 +19,6 @@ if uploaded_file:
 
     if st.button("印刷方式を判定する"):
         with st.spinner("AIが解析中です..."):
-            # 画像をバイナリ化して Part に変換
-            buffered = io.BytesIO()
-            image.save(buffered, format="PNG")
-            img_bytes = buffered.getvalue()
-            image_part = content_types.Part.from_data(data=img_bytes, mime_type="image/png")
-
-            # プロンプト定義
             prompt = """
 あなたはTシャツの印刷方式を判別する専門家です。
 
@@ -58,9 +50,8 @@ if uploaded_file:
 3. 必要があれば、注意点やデザイン修正のアドバイスも記載してください
 """
 
-            # 生成リクエスト送信
-            response = model.generate_content([prompt, image_part])
+            # 画像はPILオブジェクトのままプロンプトに含めて渡せる（gemini-1.5系）
+            response = model.generate_content([prompt, image])
 
-            # 出力表示
             st.markdown("### 判定結果")
             st.write(response.text)
