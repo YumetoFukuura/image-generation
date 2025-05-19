@@ -50,8 +50,20 @@ if uploaded_file:
 3. 必要があれば、注意点やデザイン修正のアドバイスも記載してください
 """
 
-            # 画像はPILオブジェクトのままプロンプトに含めて渡せる（gemini-1.5系）
-            response = model.generate_content([prompt, image])
+        # 🚨 修正：画像を明示的にバイト列で渡す
+        with io.BytesIO() as output:
+            image.save(output, format="PNG")
+            image_bytes = output.getvalue()
 
+        image_part = {
+            "mime_type": "image/png",
+            "data": image_bytes
+        }
+
+        try:
+            response = model.generate_content([prompt, image_part])
             st.markdown("### 判定結果")
             st.write(response.text)
+        except Exception as e:
+            st.error("Gemini API呼び出しでエラーが発生しました。")
+            st.code(str(e))
