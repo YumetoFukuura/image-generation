@@ -14,12 +14,15 @@ model = genai.GenerativeModel("gemini-1.5-flash")
 uploaded_file = st.file_uploader("画像をアップロードしてください", type=["png", "jpg", "jpeg"])
 
 if uploaded_file:
-    image = Image.open(uploaded_file)
-    st.image(image, caption="アップロードされた画像", use_container_width=True)
+    if any(c in uploaded_file.name for c in ' 　') or not uploaded_file.name.isascii():
+        st.error("⚠ ファイル名に空白や日本語を含まない英数字名にしてください")
+    else:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="アップロードされた画像", use_container_width=True)
 
-    if st.button("印刷方式を判定する"):
-        with st.spinner("AIが解析中です..."):
-            prompt = """
+        if st.button("印刷方式を判定する"):
+            with st.spinner("AIが解析中です..."):
+                prompt = """
 あなたはTシャツの印刷方式を判別する専門家です。
 
 以下の画像は、Tシャツにプリントされる予定のデザイン画像です。この画像に対して、以下の3つの印刷方式の中で最も適したものを1つだけ選んでください。また、その理由を専門的な観点から具体的に説明してください。
